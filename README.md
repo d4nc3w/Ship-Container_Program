@@ -61,6 +61,14 @@ EmptyCargo(): Sets the mass of the container to 0.
 LoadCargo(float cargoMass): Loads cargo into the container and checks if the total mass does not exceed the capacity. Throws an OverfillException if capacity is exceeded.
 PrintInformation(): Prints information about the container.
 
+IHazardNotifier
+
+    public interface IHazardNotifier
+    {
+        void NotifyHazard(string message);
+    }
+
+
 GasContainer
 
     public class GasContainer : Container,IHazardNotifier
@@ -98,8 +106,56 @@ Methods:
 EmptyCargo(): Reduces the mass of the container by 95%.
 NotifyHazard(string message): Logs a message about a detected hazard in the container.
 
-------------------------------
 LiquidContainer
+
+    public class LiquidContainer : Container,IHazardNotifier
+    {
+        private static int counter = 0;
+        public bool IsHazardous;
+        
+        public LiquidContainer(float mass, float height, float containerWeight, float depth, float capacity, bool isHazardous) 
+            : base(mass, height, containerWeight, depth, capacity)
+        {
+            SerialNumber = "KON-L-" + counter++;
+            Capacity = capacity;
+            IsHazardous = isHazardous;
+        }
+        
+        public override void EmptyCargo()
+        {
+            Mass = 0;
+        }
+        
+        public override void LoadCargo(float cargoMass)
+        {
+            if (IsHazardous)
+            {
+                float totalMass = Mass + cargoMass;
+                if (totalMass > Capacity / 2)
+                {
+                    throw new OverfillException("Liquid Container mass equal to: " + SerialNumber + " exceeds capacity");
+                }
+    
+                Mass = totalMass;
+            }
+            else
+            {
+                float totalMass = Mass + cargoMass;
+                if (totalMass > Capacity)
+                {
+                    throw new OverfillException("Liquid Container mass equal to: " + SerialNumber + " exceeds capacity");
+                }
+            
+                Mass = totalMass;
+            }
+        }
+    
+        public void NotifyHazard(string message)
+        {
+            Console.WriteLine("Hazard detected in Liquid Container: " + SerialNumber + " - " + message);
+        }
+    }
+
 A class representing a container for liquids. It extends the Container class and implements the IHazardNotifier interface.
 
 Properties:
@@ -111,8 +167,57 @@ EmptyCargo(): Sets the mass of the container to 0.
 LoadCargo(float cargoMass): Loads cargo into the container, considering the hazard level and capacity. Throws an OverfillException if capacity is exceeded.
 NotifyHazard(string message): Logs a message about a detected hazard in the container.
 
--------------------------------------------------------
 RefrigeratedContainer
+
+    public class RefrigeratedContainer : Container
+    {
+        private static int counter = 0;
+        public string Type { get; set; }
+        public float Temperature { get; set; }
+        
+        public RefrigeratedContainer(float mass, float height, float containerWeight, float depth, string type, float temperature,
+            float capacity)
+        :base(mass, height, containerWeight, depth, capacity)
+        {
+            SerialNumber = "KON-C-" + counter++;
+            Capacity = capacity;
+            Type = type;
+            Temperature = temperature;
+        }
+    
+        public override void EmptyCargo()
+        {
+            Mass = 0;
+        }
+    
+        public override void LoadCargo(float cargoMass)
+        {
+            float totalMass = Mass + cargoMass;
+            if (totalMass > Capacity)
+            {
+                throw new OverfillException("Total mass for Refrigerated Container: " + SerialNumber + " exceeds capacity");
+            }
+            Mass = totalMass;
+        }
+        
+        public void SetTemperature(float temperature)
+        {
+            
+            if (temperature < Temperature)
+            {
+                Console.WriteLine("Temperature in Refrigerated Container is too low");
+            }
+            else if (temperature > Temperature)
+            {
+                Console.WriteLine("Temperature in Refrigerated Container is too high");
+            }
+            else
+            {
+                Console.WriteLine("Temperature has been set to: " + temperature + " in: " + SerialNumber);
+            }
+        }
+    }
+
 A class representing a refrigerated container for storing perishable goods. It extends the Container class.
 
 Properties:
@@ -125,8 +230,105 @@ EmptyCargo(): Sets the mass of the container to 0.
 LoadCargo(float cargoMass): Loads cargo into the container and checks if the total mass does not exceed the capacity. Throws an OverfillException if capacity is exceeded.
 SetTemperature(float temperature): Sets the temperature of the container and logs whether the set temperature is too high or too low.
 
------------------------------------
 Ship
+
+    public class Ship
+    {
+        private static Random random = new Random();
+        public float MaxSpeed { get; set; }
+        public float MaxNumOfContainers { get; set; }
+        public float MaxCapacity { get; set; }
+        public List<Container> Containers { get; set; }
+        public string SerialNumber { get; set; }
+        
+        public Ship(float maxSpeed, float maxNumOfContainers, float maxCapacity)
+        {
+            MaxSpeed = maxSpeed;
+            MaxNumOfContainers = maxNumOfContainers;
+            MaxCapacity = maxCapacity;
+            Containers = new List<Container>();
+            SerialNumber = "SHIP-"+ random.Next(1000, 9999) + "-PL" + random.Next(10,99);
+        }
+    
+        public void LoadContainer(Container container)
+        {
+            if (Containers.Count < MaxNumOfContainers && (GetTotalWeight() + container.Mass) <= MaxCapacity)
+            {
+                Containers.Add(container);
+            }
+            else
+            {
+                throw new OverfillException("Cannot add container. Ship is full or weight limit exceeded.");
+            }
+        }
+        
+        public void RemoveContainer(Container container)
+        {
+            if (Containers.Contains(container))
+            {
+                Containers.Remove(container);
+            }
+            else 
+            {
+                throw new Exception("Container not found on the ship.");
+            }
+        }
+        
+        public void UnloadAllContainers()
+        {
+            List<Container> containersCopy = new List<Container>(Containers);
+            foreach (var container in containersCopy)
+            {
+                container.EmptyCargo();
+                RemoveContainer(container);
+            }
+        }
+    
+        private float GetTotalWeight()
+        {
+            float totalWeight = 0;
+            foreach (var container in Containers)
+            {
+                totalWeight += container.Mass;
+            }
+            return totalWeight;
+        }
+    
+        public void ReplaceContainer(Container oldContainer, Container newContainer)
+        {
+            if(Containers.Contains(oldContainer))
+            {
+                Containers.Remove(oldContainer);
+                LoadContainer(newContainer);
+                Console.WriteLine("Container: " + oldContainer + "has been replaces by Container: " + newContainer);
+            }
+            else
+            {
+                Console.WriteLine("Container not found on the ship. Please select other container");
+            }
+        }
+    
+        public void TransferContainer(Ship otherShip, Container container)
+        {
+            if(Containers.Contains(container))
+            {
+                otherShip.LoadContainer(container);
+                RemoveContainer(container);
+                Console.WriteLine("Container: " + container + "has been transfered to ship: " + otherShip);
+            }
+            else
+            {
+                Console.WriteLine("Given container" + container + "is not present on the ship");
+            }
+        }
+        
+        public void PrintInformation()
+        {
+            Console.WriteLine("Ship: " + SerialNumber + " has " + Containers.Count + " containers on board.");
+            Console.WriteLine("Total weight of containers: " + GetTotalWeight());
+        }
+    }
+
 A class representing a ship that can carry containers. It contains properties such as maximum speed, maximum number of containers, maximum capacity, and a list of containers on the ship.
 
 Properties:
@@ -138,14 +340,14 @@ Containers: A list of containers currently on the ship.
 SerialNumber: A unique identifier for the ship.
 Methods:
 
-LoadContainer(Container container): Loads a container onto the ship if there is enough space and capacity. Throws an OverfillException if the ship cannot accommodate the container.
+LoadContainer(Container container) 
+Loads a container onto the ship if there is enough space and capacity. Throws an OverfillException if the ship cannot accommodate the container.
 RemoveContainer(Container container): Removes a container from the ship.
 UnloadAllContainers(): Unloads all containers from the ship.
 ReplaceContainer(Container oldContainer, Container newContainer): Replaces an old container on the ship with a new container.
 TransferContainer(Ship otherShip, Container container): Transfers a container from the ship to another ship.
 PrintInformation(): Prints information about the ship and the containers on board.
 
------------------------------------
 Controller
 
     public class Controller
@@ -775,6 +977,14 @@ Methods:
 
 Run(): Provides a menu-driven interface for the user to manage ships and containers. The user can add/remove ships and containers, place/remove containers on/from ships, modify containers, print information, transfer containers between ships, and replace containers on ships.
 
------------------------------------
 OverfillException
+
+    public class OverfillException : Exception
+    {
+        public OverfillException(string message) : base(message)
+        {
+            Console.WriteLine("OverfillException: " + message);
+        }
+    }
+
 A custom exception class used to indicate when a container exceeds its capacity during loading. It takes a message as a parameter, which contains information about the specific error.
