@@ -977,6 +977,46 @@ Methods:
 
 Run(): Provides a menu-driven interface for the user to manage ships and containers. The user can add/remove ships and containers, place/remove containers on/from ships, modify containers, print information, transfer containers between ships, and replace containers on ships.
 
+Program
+
+    public class Program
+    {
+        public static void Main(string[] args)
+        {
+            List<Ship> ships = new List<Ship>();
+            List<Container> containers = new List<Container>();
+            
+            LiquidContainer Lcontainer = new LiquidContainer(100, 10, 10, 10, 500, true);
+            GasContainer Gcontainer = new GasContainer(100, 50, 50, 50, 200, 300);
+            RefrigeratedContainer Rcontainer = new RefrigeratedContainer(100, 10, 10, 10, 
+                "Fruit", 5, 200);
+            
+            containers.Add(Lcontainer);
+            containers.Add(Gcontainer);
+            containers.Add(Rcontainer);
+    
+            Ship ship1 = new Ship(200, 50, 1000);
+            Ship ship2 = new Ship(500, 20, 400);
+            
+            ships.Add(ship1);
+            ships.Add(ship2);
+            
+            Controller controller = new Controller(ships, containers);
+            controller.Run();
+        
+        }
+    }
+
+The Program class serves as the entry point of your application. It contains the Main method, which initializes lists of ships and containers, adds instances of different types of containers and ships to these lists, and creates a Controller instance to manage the application. The Main method then invokes the Run method of the Controller class, which handles the interactive menu and program flow.
+
+Functionality:
+
+Initializes two lists: one for Ship objects and one for Container objects.
+Creates instances of different types of containers (LiquidContainer, GasContainer, and RefrigeratedContainer) with specified parameters and adds them to the containers list.
+Creates instances of ships (Ship) with specified parameters and adds them to the ships list.
+Creates an instance of Controller using the lists of ships and containers, which will manage the interaction and operations on ships and containers.
+Invokes the Run method of the Controller instance, which starts the user interaction and manages the overall program flow.
+
 OverfillException
 
     public class OverfillException : Exception
